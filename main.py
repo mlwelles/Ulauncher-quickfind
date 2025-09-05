@@ -1,4 +1,7 @@
 import subprocess
+import shutil
+from functools import cache
+
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent
@@ -7,7 +10,8 @@ from ulauncher.api.shared.action.RenderResultListAction import RenderResultListA
 from ulauncher.api.shared.action.RunScriptAction import RunScriptAction
 
 def find(search, path='~', extra=''):
-    result = subprocess.run(f"cd {path} && fd -a {extra} {search}", shell=True, capture_output=True, text=True)
+    fd = get_fd_command()
+    result = subprocess.run(f"cd {path} && {fd} -a {extra} {search}", shell=True, capture_output=True, text=True)
     return [i for i in result.stdout.splitlines()]
 
 def get_item(path, name=None, desc=''):
@@ -15,6 +19,12 @@ def get_item(path, name=None, desc=''):
                                              name=f'{name if name else path}',
                                              description=desc,
                                              on_enter=RunScriptAction(f'xdg-open "{path}"', []))
+@cache
+def get_fd_command():
+    path = shutil.which('fd') or shutil.which('fdfind')
+    if not path:
+        raise FileNotFoundError("Found neither fd or fdfind in system path")
+    return path
 
 class DemoExtension(Extension):
 
